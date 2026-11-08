@@ -1,0 +1,7 @@
+# Go build outputs
+*.exe
+*.test
+*.out
+
+# Local IDE settings
+.idea/
