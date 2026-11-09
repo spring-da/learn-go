@@ -42,16 +42,16 @@ func runCase(label string, ctx context.Context, repo UserRepository, ids []int64
 
 func timeoutCase(repo UserRepository, ids []int64) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-	defer cancel()
+	defer cancel() // 200 毫秒以后 cancel 执行 然后 runCase 内部继续 但是内部的 ctx.Done() 会理解打断
 	runCase("timeout", ctx, repo, ids)
 }
 
 func manualCase(repo UserRepository, ids []int64) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	timer := time.AfterFunc(100*time.Millisecond, cancel)
+	timer := time.AfterFunc(100*time.Millisecond, cancel) // time.AfterFunc(d, f) 的语义就是："d 之后，异步执行 f"。这里传进去的 cancel 类型是 context.CancelFunc，它就是 func()：
 	defer timer.Stop()
-	runCase("manual-cancel", ctx, repo, ids)
+	runCase("manual-cancel", ctx, repo, ids) // 如果只靠 defer cancel()，取消会发生在 runCase 跑完之后，那取消就毫无意义了。AfterFunc 里的 cancel 是为了在 runCase 运行期间就把 ctx 取消掉
 }
 
 func main() {

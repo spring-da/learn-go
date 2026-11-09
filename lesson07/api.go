@@ -23,8 +23,8 @@ type API struct {
 func NewHandler(repo UserRepository) http.Handler {
 	api := &API{repo: repo}
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /users/{id}", api.getUser)
-	mux.HandleFunc("/users/{id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /users/{id}", api.getUser)                               // 这是 Go 1.22 起 http.ServeMux 新增的模式语法，格式是： [METHOD ][HOST]/[PATH]
+	mux.HandleFunc("/users/{id}", func(w http.ResponseWriter, r *http.Request) { // ServeMux 不会自动生成 405 响应 那么一个 POST /users/123 请求会发生什么？ 它会落到 "/" 这个兜底 handler → 返回 404
 		w.Header().Set("Allow", "GET, HEAD")
 		writeJSON(w, http.StatusMethodNotAllowed, ErrorBody{Error: "method not allowed"})
 	})
