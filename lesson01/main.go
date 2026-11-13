@@ -33,7 +33,7 @@ func main() {
 	}
 
 	// 复制结构体的值；修改副本的整数，不会修改原值的整数。
-	copyUser := user
+	copyUser := user // 如果是 &User 赋值的就是指针,指向同一个 User
 	copyUser.Points += 100
 	fmt.Printf("value copy: original=%d copy=%d\n", user.Points, copyUser.Points)
 

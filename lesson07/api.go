@@ -35,13 +35,13 @@ func NewHandler(repo UserRepository) http.Handler {
 }
 
 func (api *API) getUser(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64) // 字符串转整数 10进制 64位宽
 	if err != nil || id <= 0 {
 		writeJSON(w, http.StatusBadRequest, ErrorBody{Error: "id must be a positive 64-bit integer"})
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), QueryTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), QueryTimeout) // 设置超时时间
 	defer cancel()
 	user, found, err := api.repo.FindByID(ctx, id)
 	switch {

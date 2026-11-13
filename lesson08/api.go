@@ -33,8 +33,8 @@ func NewHandler(repo UserRepository) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /users", api.createUser)
 	mux.HandleFunc("GET /users/{id}", api.getUser)
-	mux.HandleFunc("/users", methodNotAllowed("POST"))
-	mux.HandleFunc("/users/{id}", methodNotAllowed("GET, HEAD"))
+	mux.HandleFunc("/users", methodNotAllowed("POST"))           // 非post 的 /users 请求会走这里
+	mux.HandleFunc("/users/{id}", methodNotAllowed("GET, HEAD")) // 非get 的 /users/{id} 请求会走这里
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, ErrorBody{Error: "route not found"})
 	})
