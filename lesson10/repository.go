@@ -59,11 +59,17 @@ func OpenUserRepository(ctx context.Context, path string) (*SQLUserRepository, e
 	db.SetMaxOpenConns(4)
 	db.SetMaxIdleConns(4)
 	if _, err := db.ExecContext(ctx, "PRAGMA journal_mode=WAL"); err != nil {
-		db.Close()
+		err := db.Close()
+		if err != nil {
+			return nil, err
+		}
 		return nil, fmt.Errorf("enable WAL: %w", err)
 	}
 	if _, err := db.ExecContext(ctx, schema); err != nil {
-		db.Close()
+		err := db.Close()
+		if err != nil {
+			return nil, err
+		}
 		return nil, fmt.Errorf("initialize schema: %w", err)
 	}
 	return &SQLUserRepository{db: db}, nil
@@ -94,7 +100,11 @@ func (r *SQLUserRepository) Create(ctx context.Context, name string, initialPoin
 		return User{}, fmt.Errorf("begin registration: %w", err)
 	}
 	// 任意错误分支提前返回，都会执行回滚；Commit 成功后此调用无需再做工作。
-	defer tx.Rollback()
+	defer func(tx *sql.Tx) {
+		err := tx.Rollback()
+		if err != nil {
+		}
+	}(tx)
 
 	var user User
 	err = tx.QueryRowContext(ctx,
@@ -117,8 +127,7 @@ func (r *SQLUserRepository) Create(ctx context.Context, name string, initialPoin
 }
 
 func classifyWriteError(operation string, err error) error {
-	var databaseError *sqlite.Error
-	if errors.As(err, &databaseError) {
+	if databaseError, ok := errors.AsType[*sqlite.Error](err); ok {
 		switch databaseError.Code() {
 		case sqlite3.SQLITE_CONSTRAINT_UNIQUE:
 			return ErrNameExists

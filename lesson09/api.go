@@ -54,11 +54,11 @@ func (api *API) createUser(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusUnsupportedMediaType, ErrorBody{Error: "Content-Type must be application/json"})
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, MaxCreateBody)
+	r.Body = http.MaxBytesReader(w, r.Body, MaxCreateBody) // MaxBytesReader 包一层，超过 MaxCreateBody 字节数就报错，防止恶意超大请求（DoS 防护） 注意它是替换 r.Body，之后所有读取都受限制。
 	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	var input *CreateUserRequest
-	if err := decoder.Decode(&input); err != nil {
+	decoder.DisallowUnknownFields()                // SON 里出现结构体没有的字段就报错。这样能及时发现客户端字段拼写错误（如把 name 写成 nmae），而不是静默忽略。属于严格 API 设计。
+	var input *CreateUserRequest                   // 此时 input 本身不是一个 CreateUserRequest 对象，它只是"一个能存放 CreateUserRequest 地址的变量"，现在里面是 nil
+	if err := decoder.Decode(&input); err != nil { // & 是取地址运算符，&input 得到的是"变量 input 自己的内存地址"
 		writeDecodeError(w, err)
 		return
 	}

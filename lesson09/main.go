@@ -16,7 +16,7 @@ func main() {
 	if dbPath == "" {
 		dbPath = filepath.Join("data", "users.db")
 	}
-	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil { // 0o 八进制 755文件权限
 		log.Fatal(err)
 	}
 	repo, err := OpenUserRepository(context.Background(), dbPath)

@@ -14,6 +14,8 @@ import (
 	sqlite3 "modernc.org/sqlite/lib"
 )
 
+// 变量注入
+//
 //go:embed schema.sql
 var schema string
 
@@ -35,27 +37,32 @@ type SQLUserRepository struct {
 
 // 调用方负责先创建数据库文件的父目录。
 func OpenUserRepository(ctx context.Context, path string) (*SQLUserRepository, error) {
-	abs, err := filepath.Abs(path)
+	abs, err := filepath.Abs(path) // 获取绝对路径
 	if err != nil {
 		return nil, err
 	}
-	uriPath := filepath.ToSlash(abs)
-	if !strings.HasPrefix(uriPath, "/") {
+	uriPath := filepath.ToSlash(abs)      // Windows 的 \ 转成 /
+	if !strings.HasPrefix(uriPath, "/") { // 是否以 / 开头
 		uriPath = "/" + uriPath
 	}
+
+	// 设置数据库连接参数
 	dsn := url.URL{Scheme: "file", Path: uriPath}
 	params := url.Values{}
-	params.Add("_pragma", "busy_timeout(5000)")
-	params.Add("_pragma", "foreign_keys(1)")
-	params.Add("_pragma", "synchronous(FULL)")
+	params.Add("_pragma", "busy_timeout(5000)") // 数据库被锁时，最多等 5000 毫秒再报 "database is locked"，避免立即失败
+	params.Add("_pragma", "foreign_keys(1)")    // 开启外键约束（SQLite 默认关闭，必须手动开，且是连接级的）
+	params.Add("_pragma", "synchronous(FULL)")  // 同步级别 FULL：每次事务提交都确保落盘，最安全（慢一点），断电不易丢数据
 	dsn.RawQuery = params.Encode()
+	// SQLite 是文件级数据库，同一时刻只允许一个写者（读可以并发，写要串行）。连接开太多没意义，反而增加锁竞争。MaxOpenConns=4 是个务实的小值，配合 busy_timeout 让写冲突时排队等待而不是直接报错。
+	//对比 MySQL/Postgres，那里常见 MaxOpenConns 几十上百；SQLite 则要压低。
 
 	db, err := sql.Open("sqlite", dsn.String())
 	if err != nil {
 		return nil, err
 	}
-	db.SetMaxOpenConns(4)
-	db.SetMaxIdleConns(4)
+	db.SetMaxOpenConns(4) // 最多同时 4 条连接。
+	db.SetMaxIdleConns(4) // 空闲时保留 4 条连接在池里复用。
+
 	// WAL 是数据库文件的持久设置；连接级设置放在上面的 DSN 中。
 	if _, err := db.ExecContext(ctx, "PRAGMA journal_mode=WAL"); err != nil {
 		db.Close()
